@@ -127,14 +127,25 @@ jobs:
         run: |
           Compress-Archive -Path native\install\bin\* -DestinationPath Nexel-Windows-x64.zip
 
-      - name: Create NSIS installer script
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nexel-Windows-x64-portable
+          path: Nexel-Windows-x64.zip
+
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+
+      - name: Create NSIS installer
         shell: pwsh
         run: |
           $nsiContent = @'
           !include "MUI2.nsh"
 
           Name "Nexel"
-          OutFile "..\..\..\Nexel-Windows-x64-Setup.exe"
+          OutFile "Nexel-Windows-x64-Setup.exe"
           InstallDir "$PROGRAMFILES64\Nexel"
           RequestExecutionLevel admin
 
@@ -167,18 +178,11 @@ jobs:
           '@
           $nsiContent | Out-File -FilePath native\install\bin\installer.nsi -Encoding ASCII
 
-      - name: Build NSIS installer
-        shell: cmd
-        run: |
-          choco install nsis -y
-          cd native\install\bin
-          makensis installer.nsi
-
-      - name: Upload Windows ZIP
-        uses: actions/upload-artifact@v4
-        with:
-          name: Nexel-Windows-x64-portable
-          path: Nexel-Windows-x64.zip
+          $env:PATH += ";C:\Program Files (x86)\NSIS"
+          Push-Location native\install\bin
+          & makensis installer.nsi
+          Pop-Location
+          Move-Item native\install\bin\Nexel-Windows-x64-Setup.exe .
 
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v4
