@@ -54,10 +54,13 @@ jobs:
           macdeployqt Nexel.app -verbose=2 -always-overwrite
           # Ad-hoc code sign all frameworks and the app
           codesign --force --deep --sign - Nexel.app
-          # Verify signing
-          codesign --verify --deep --strict Nexel.app || true
-          # Create DMG
-          hdiutil create -volname "Nexel" -srcfolder Nexel.app -ov -format UDZO Nexel.dmg
+
+          # Create DMG with Applications shortcut
+          mkdir -p dmg_staging
+          cp -R Nexel.app dmg_staging/
+          ln -s /Applications dmg_staging/Applications
+          hdiutil create -volname "Nexel" -srcfolder dmg_staging -ov -format UDZO Nexel.dmg
+          rm -rf dmg_staging
 
       - name: Rename DMG
         run: |
