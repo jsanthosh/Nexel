@@ -14,7 +14,7 @@ jobs:
   # macOS  —  Build .dmg (Apple Silicon)
   # ─────────────────────────────────────────────
   build-macos:
-    runs-on: macos-14  # Apple Silicon (M1) runner
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
@@ -27,10 +27,6 @@ jobs:
           arch: 'clang_64'
           modules: 'qtnetworkauth'
           cache: true
-
-      - name: Install dependencies
-        run: |
-          brew install sqlite3
 
       - name: Configure CMake
         run: |
@@ -88,7 +84,7 @@ jobs:
           host: 'windows'
           target: 'desktop'
           arch: 'win64_msvc2019_64'
-          modules: 'qtnetworkauth'
+          modules: 'qtnetworkauth qtdeclarative'
           cache: true
 
       - name: Setup MSVC
@@ -131,19 +127,15 @@ jobs:
         run: |
           Compress-Archive -Path native\install\bin\* -DestinationPath Nexel-Windows-x64.zip
 
-      - name: Create installer with NSIS
+      - name: Create NSIS installer script
         shell: pwsh
         run: |
-          # Download NSIS
-          choco install nsis -y
-
-          # Create NSIS script
-          @"
+          $nsiContent = @'
           !include "MUI2.nsh"
 
           Name "Nexel"
-          OutFile "..\..\Nexel-Windows-x64-Setup.exe"
-          InstallDir "`$PROGRAMFILES64\Nexel"
+          OutFile "..\..\..\Nexel-Windows-x64-Setup.exe"
+          InstallDir "$PROGRAMFILES64\Nexel"
           RequestExecutionLevel admin
 
           !insertmacro MUI_PAGE_DIRECTORY
@@ -151,32 +143,34 @@ jobs:
           !insertmacro MUI_LANGUAGE "English"
 
           Section "Install"
-            SetOutPath "`$INSTDIR"
+            SetOutPath "$INSTDIR"
             File /r ".\*.*"
 
-            ; Create shortcuts
-            CreateDirectory "`$SMPROGRAMS\Nexel"
-            CreateShortcut "`$SMPROGRAMS\Nexel\Nexel.lnk" "`$INSTDIR\Nexel.exe"
-            CreateShortcut "`$DESKTOP\Nexel.lnk" "`$INSTDIR\Nexel.exe"
+            CreateDirectory "$SMPROGRAMS\Nexel"
+            CreateShortcut "$SMPROGRAMS\Nexel\Nexel.lnk" "$INSTDIR\Nexel.exe"
+            CreateShortcut "$DESKTOP\Nexel.lnk" "$INSTDIR\Nexel.exe"
 
-            ; Uninstaller
-            WriteUninstaller "`$INSTDIR\Uninstall.exe"
+            WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-            ; Add/Remove Programs entry
             WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nexel" "DisplayName" "Nexel"
-            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nexel" "UninstallString" "`$INSTDIR\Uninstall.exe"
+            WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nexel" "UninstallString" "$INSTDIR\Uninstall.exe"
             WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nexel" "DisplayVersion" "1.0.0"
             WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nexel" "Publisher" "Nexel"
           SectionEnd
 
           Section "Uninstall"
-            RMDir /r "`$INSTDIR"
-            RMDir /r "`$SMPROGRAMS\Nexel"
-            Delete "`$DESKTOP\Nexel.lnk"
+            RMDir /r "$INSTDIR"
+            RMDir /r "$SMPROGRAMS\Nexel"
+            Delete "$DESKTOP\Nexel.lnk"
             DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nexel"
           SectionEnd
-          "@ | Out-File -FilePath native\install\bin\installer.nsi -Encoding ASCII
+          '@
+          $nsiContent | Out-File -FilePath native\install\bin\installer.nsi -Encoding ASCII
 
+      - name: Build NSIS installer
+        shell: cmd
+        run: |
+          choco install nsis -y
           cd native\install\bin
           makensis installer.nsi
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 project(Nexel
     VERSION 1.0.0
-    LANGUAGES CXX
+    LANGUAGES C CXX
     HOMEPAGE_URL "https://github.com/jsanthosh/Nexel"
     DESCRIPTION "High-performance native spreadsheet application")
 
@@ -39,8 +39,23 @@ find_package(Qt6 COMPONENTS
 )
 find_package(Qt6CorePrivate QUIET)
 
-if(NOT WIN32)
-    find_package(SQLite3 REQUIRED)
+# SQLite3: use system library if available, otherwise use bundled amalgamation
+find_package(SQLite3 QUIET)
+if(NOT SQLite3_FOUND)
+    # Use bundled SQLite3 amalgamation
+    add_library(sqlite3_bundled STATIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite3/sqlite3.c
+    )
+    target_include_directories(sqlite3_bundled PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite3
+    )
+    if(MSVC)
+        target_compile_options(sqlite3_bundled PRIVATE /W0)
+    else()
+        target_compile_options(sqlite3_bundled PRIVATE -w)
+    endif()
+    add_library(SQLite::SQLite3 ALIAS sqlite3_bundled)
+    set(SQLite3_FOUND TRUE)
 endif()
 
 # Core Engine Sources
@@ -169,9 +184,7 @@ if(TARGET Qt6::CorePrivate)
     target_link_libraries(Nexel Qt6::CorePrivate)
 endif()
 
-if(TARGET SQLite::SQLite3)
-    target_link_libraries(Nexel SQLite::SQLite3)
-endif()
+target_link_libraries(Nexel SQLite::SQLite3)
 
 # Include directories
 target_include_directories(Nexel PRIVATE
@@ -179,6 +192,7 @@ target_include_directories(Nexel PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/database
     ${CMAKE_CURRENT_SOURCE_DIR}/src/services
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sqlite3
 )
 
 # macOS specific settings

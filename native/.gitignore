@@ -38,8 +38,9 @@ ui_*.h
 *.a
 *.lib
 
-# Dependencies
-/third_party/
+# Dependencies (keep third_party/sqlite3 for bundled SQLite)
+/third_party/*
+!/third_party/sqlite3/
 
 # Database
 *.db
