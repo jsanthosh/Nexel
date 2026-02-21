@@ -48,10 +48,14 @@ jobs:
           cd native/build
           cmake --install . --config Release
 
-      - name: Deploy Qt frameworks
+      - name: Deploy Qt frameworks and sign
         run: |
           cd native/install
-          macdeployqt Nexel.app -dmg
+          macdeployqt Nexel.app
+          # Ad-hoc code sign to prevent "damaged" error on download
+          codesign --force --deep --sign - Nexel.app
+          # Create DMG
+          hdiutil create -volname "Nexel" -srcfolder Nexel.app -ov -format UDZO Nexel.dmg
 
       - name: Rename DMG
         run: |
