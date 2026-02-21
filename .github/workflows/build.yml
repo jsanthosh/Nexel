@@ -11,29 +11,23 @@ permissions:
 
 jobs:
   # ─────────────────────────────────────────────
-  # macOS  —  Build .dmg (Apple Silicon)
+  # macOS  —  Build .dmg (Universal: Apple Silicon + Intel)
   # ─────────────────────────────────────────────
   build-macos:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.7.3'
-          host: 'mac'
-          target: 'desktop'
-          arch: 'clang_64'
-          modules: 'qtnetworkauth'
-          cache: true
+      - name: Install Qt6 via Homebrew
+        run: |
+          brew install qt@6
 
       - name: Configure CMake
         run: |
+          export Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6
           cd native
           mkdir -p build && cd build
           cmake -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_OSX_ARCHITECTURES=arm64 \
                 -DCMAKE_PREFIX_PATH="$Qt6_DIR" \
                 -DCMAKE_INSTALL_PREFIX=../install \
                 ..
@@ -48,30 +42,38 @@ jobs:
           cd native/build
           cmake --install . --config Release
 
+      - name: Verify binary architecture
+        run: |
+          file native/install/Nexel.app/Contents/MacOS/Nexel
+          otool -L native/install/Nexel.app/Contents/MacOS/Nexel | head -20
+
       - name: Deploy Qt frameworks and sign
         run: |
+          export PATH="$(brew --prefix qt@6)/bin:$PATH"
           cd native/install
-          macdeployqt Nexel.app
-          # Ad-hoc code sign to prevent "damaged" error on download
+          macdeployqt Nexel.app -verbose=2 -always-overwrite
+          # Ad-hoc code sign all frameworks and the app
           codesign --force --deep --sign - Nexel.app
+          # Verify signing
+          codesign --verify --deep --strict Nexel.app || true
           # Create DMG
           hdiutil create -volname "Nexel" -srcfolder Nexel.app -ov -format UDZO Nexel.dmg
 
       - name: Rename DMG
         run: |
-          mv native/install/Nexel.dmg Nexel-macOS-arm64.dmg
+          mv native/install/Nexel.dmg Nexel-macOS.dmg
 
       - name: Upload macOS DMG
         uses: actions/upload-artifact@v4
         with:
-          name: Nexel-macOS-arm64
-          path: Nexel-macOS-arm64.dmg
+          name: Nexel-macOS
+          path: Nexel-macOS.dmg
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: Nexel-macOS-arm64.dmg
+          files: Nexel-macOS.dmg
 
   # ─────────────────────────────────────────────
   # Windows  —  Build .exe installer
