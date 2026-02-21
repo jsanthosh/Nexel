@@ -208,12 +208,34 @@ def create_icns(png_path, icns_path):
     shutil.rmtree(iconset_dir)
 
 
+def create_ico(png_path, ico_path):
+    """Create Windows .ico file with multiple sizes."""
+    src = Image.open(png_path)
+    sizes = [16, 24, 32, 48, 64, 128, 256]
+    frames = []
+    for s in sizes:
+        resized = src.resize((s, s), Image.LANCZOS)
+        frames.append(resized)
+    frames[0].save(ico_path, format='ICO', sizes=[(s, s) for s in sizes],
+                   append_images=frames[1:])
+
+
 if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
     icon = draw_icon()
     png_path = os.path.join(script_dir, 'icon.png')
     icns_path = os.path.join(script_dir, 'AppIcon.icns')
+    ico_path = os.path.join(script_dir, 'nexel.ico')
     icon.save(png_path, 'PNG')
     print(f"Saved {png_path}")
-    create_icns(png_path, icns_path)
-    print(f"Saved {icns_path}")
+
+    # macOS .icns
+    try:
+        create_icns(png_path, icns_path)
+        print(f"Saved {icns_path}")
+    except Exception as e:
+        print(f"Skipping .icns (not on macOS?): {e}")
+
+    # Windows .ico
+    create_ico(png_path, ico_path)
+    print(f"Saved {ico_path}")

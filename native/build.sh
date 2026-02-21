@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Native Spreadsheet Build Script
+# Nexel Build Script
 # Supports macOS, Linux, and Windows (with MSVC)
 
 set -e
@@ -20,7 +20,7 @@ else
     OS="Unknown"
 fi
 
-echo "===== Native Spreadsheet Build Script ====="
+echo "===== Nexel Build Script ====="
 echo "OS: $OS"
 echo "Build Directory: $BUILD_DIR"
 
@@ -100,15 +100,15 @@ echo "===== Build Complete ====="
 echo "Build Type: $BUILD_TYPE"
 
 if [ "$OS" = "macOS" ]; then
-    echo "App Location: $INSTALL_PREFIX/NativeSpreadsheet.app/Contents/MacOS/NativeSpreadsheet"
+    echo "App Location: $INSTALL_PREFIX/Nexel.app/Contents/MacOS/Nexel"
     echo ""
     echo "To run the application:"
-    echo "  open $INSTALL_PREFIX/NativeSpreadsheet.app"
+    echo "  open $INSTALL_PREFIX/Nexel.app"
 else
-    echo "App Location: $INSTALL_PREFIX/bin/NativeSpreadsheet"
+    echo "App Location: $INSTALL_PREFIX/bin/Nexel"
     echo ""
     echo "To run the application:"
-    echo "  $INSTALL_PREFIX/bin/NativeSpreadsheet"
+    echo "  $INSTALL_PREFIX/bin/Nexel"
 fi
 
 echo ""

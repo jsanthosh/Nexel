@@ -1,14 +1,18 @@
 cmake_minimum_required(VERSION 3.24)
-project(NativeSpreadsheet
+project(Nexel
     VERSION 1.0.0
     LANGUAGES CXX
-    HOMEPAGE_URL "https://spreadsheet.local"
+    HOMEPAGE_URL "https://github.com/jsanthosh/Nexel"
     DESCRIPTION "High-performance native spreadsheet application")
 
 # C++ Standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Wextra -O3")
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /O2")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall -Wextra -O3")
+endif()
 
 # Force native architecture (avoid universal binary issues with Homebrew Qt)
 if(APPLE)
@@ -35,7 +39,9 @@ find_package(Qt6 COMPONENTS
 )
 find_package(Qt6CorePrivate QUIET)
 
-find_package(SQLite3 REQUIRED)
+if(NOT WIN32)
+    find_package(SQLite3 REQUIRED)
+endif()
 
 # Core Engine Sources
 set(CORE_SOURCES
@@ -139,7 +145,7 @@ set(APP_SOURCES
 )
 
 # Create executable
-add_executable(NativeSpreadsheet
+add_executable(Nexel
     ${APP_SOURCES}
     ${CORE_SOURCES}
     ${DATABASE_SOURCES}
@@ -148,21 +154,27 @@ add_executable(NativeSpreadsheet
 )
 
 # Link libraries
-target_link_libraries(NativeSpreadsheet
+target_link_libraries(Nexel
     Qt6::Core
-    Qt6::CorePrivate
     Qt6::Gui
     Qt6::Widgets
     Qt6::Sql
     Qt6::Network
     Qt6::Concurrent
     Qt6::Qml
-    SQLite::SQLite3
     Threads::Threads
 )
 
+if(TARGET Qt6::CorePrivate)
+    target_link_libraries(Nexel Qt6::CorePrivate)
+endif()
+
+if(TARGET SQLite::SQLite3)
+    target_link_libraries(Nexel SQLite::SQLite3)
+endif()
+
 # Include directories
-target_include_directories(NativeSpreadsheet PRIVATE
+target_include_directories(Nexel PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
     ${CMAKE_CURRENT_SOURCE_DIR}/src/database
     ${CMAKE_CURRENT_SOURCE_DIR}/src/services
@@ -175,8 +187,8 @@ if(APPLE)
     set(APP_ICON_MACOSX ${CMAKE_CURRENT_SOURCE_DIR}/resources/AppIcon.icns)
     set_source_files_properties(${APP_ICON_MACOSX} PROPERTIES
         MACOSX_PACKAGE_LOCATION "Resources")
-    target_sources(NativeSpreadsheet PRIVATE ${APP_ICON_MACOSX})
-    set_target_properties(NativeSpreadsheet PROPERTIES
+    target_sources(Nexel PRIVATE ${APP_ICON_MACOSX})
+    set_target_properties(Nexel PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.nexel.app"
         MACOSX_BUNDLE_BUNDLE_NAME "Nexel"
@@ -188,13 +200,18 @@ endif()
 
 # Windows specific settings
 if(WIN32)
-    set_target_properties(NativeSpreadsheet PROPERTIES
+    set(APP_ICON_RC ${CMAKE_CURRENT_SOURCE_DIR}/resources/nexel.rc)
+    if(EXISTS ${APP_ICON_RC})
+        target_sources(Nexel PRIVATE ${APP_ICON_RC})
+    endif()
+    set_target_properties(Nexel PROPERTIES
         WIN32_EXECUTABLE TRUE
+        OUTPUT_NAME "Nexel"
     )
 endif()
 
 # Install
-install(TARGETS NativeSpreadsheet
+install(TARGETS Nexel
     BUNDLE DESTINATION . COMPONENT Runtime
     RUNTIME DESTINATION bin COMPONENT Runtime
 )
